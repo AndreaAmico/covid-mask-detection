@@ -20,8 +20,10 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
-
-RunningInCOLAB = 'google.colab' in str(get_ipython())
+try:
+    RunningInCOLAB = 'google.colab' in str(get_ipython())
+except:
+    RunningInCOLAB = False
 
 if RunningInCOLAB:
     logger.info('Script running in Google Colab')
