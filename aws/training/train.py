@@ -12,21 +12,39 @@ from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 
 from PIL import Image
 
-import logging
-logger = logging.getLogger()
-handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s %(levelname)4s %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+# import logging
+# logger = logging.getLogger()
+# handler = logging.StreamHandler()
+# formatter = logging.Formatter('%(asctime)s %(levelname)4s %(message)s')
+# handler.setFormatter(formatter)
+# logger.addHandler(handler)
+# logger.setLevel(logging.DEBUG)
+
+
+from datetime import datetime
+def print_log(message):
+    PRINT_LOG = True
+    if PRINT_LOG:
+        now = datetime.now()
+        current_time = now.strftime("%H:%M:%S")
+        print(f' -> -> -> -> -> -> {current_time}:  {message}')
+
+
 
 try:
     RunningInCOLAB = 'google.colab' in str(get_ipython())
 except:
     RunningInCOLAB = False
 
+import sys
+print_log(f'python: {sys.version}')
+print_log(f'torch: {torch.__version__}')
+print_log(f'torchvision: {torchvision.__version__}')
+
+    
+    
 if RunningInCOLAB:
-    logger.info('Script running in Google Colab')
+    print_log('Script running in Google Colab')
     defaults_args = dict(
         epochs = 10,
         batch_size = 4,
@@ -38,12 +56,12 @@ if RunningInCOLAB:
         train = "/content/gdrive/My Drive/progetti/_Plansoft/mask_detection/data/train"
     )
 else:
-    logger.info('Script not running in Google Colab')
+    print_log('Script running in AWS')
     defaults_args = dict(
         epochs = 10,
         batch_size = 4,
         learning_rate = 0.005,
-        use_cuda = False,
+        use_cuda = True,
 
         output_data_dir = os.environ['SM_OUTPUT_DATA_DIR'],
         model_dir = os.environ['SM_MODEL_DIR'],
@@ -94,6 +112,7 @@ class MaskDataset(object):
     def __getitem__(self, index):
         idx = self.index_list[index]
         img = Image.open(self.data[idx]['image_file_path']).convert("RGB")
+        print_log(f'Opening image {self.data[idx]["image_file_path"]}')
 
         ## create target
         boxes = torch.as_tensor(self.data[idx]['boxes'], dtype=torch.float32)
@@ -119,7 +138,7 @@ def get_model(num_classes):
 
 
 def get_data(annotation_path, imgs_path):
-    logger.info(f'parsing xml start')
+    print_log(f'parsing xml start')
     data = []
     for label_file_name in os.listdir(annotation_path):
 
@@ -135,14 +154,14 @@ def get_data(annotation_path, imgs_path):
             classes = classes,
             boxes = boxes,
             without_mask = 0 in classes))
-    logger.info(f'parsing xml finish')
+    print_log(f'parsing xml finish')
     return data
 
 
 
 if __name__ == "__main__":
     
-    logger.info('Main started')
+    print_log('Main started')
     parser = argparse.ArgumentParser()
     # hyperparameters sent by the client are passed as command-line arguments to the script.
     parser.add_argument('--epochs', type=int, default=defaults_args['epochs'])
@@ -162,7 +181,7 @@ if __name__ == "__main__":
 
     # instanciate device (gpu vs cpu)    
     device = torch.device('cuda') if args.use_cuda else torch.device('cpu')
-    logger.info('selected cuda' if args.use_cuda else 'selected gpu')
+    print_log('selected cuda' if args.use_cuda else 'selected gpu')
     
     # get training data
     training_data = get_data(annotation_path, imgs_path)
@@ -181,7 +200,7 @@ if __name__ == "__main__":
     losses_hist = []
     epoc_losses_hist = []
 
-    logger.info(f'starting training')
+    print_log(f'starting training')
     for epoch in range(args.epochs):
         model.train()
         epoch_loss = 0
@@ -193,7 +212,7 @@ if __name__ == "__main__":
 
         for imgs, targets in data_loader:
 
-            logger.debug(f'start training on batch {a}/{len(data_loader)}')
+            # logger.debug(f'start training on batch {a}/{len(data_loader)}')
 
 
             ## convert cpu tensor to device tensor
@@ -209,12 +228,12 @@ if __name__ == "__main__":
             epoch_loss += losses
             losses_hist.append(losses)
 
-            logger.debug(f'finished training on batch {a}/{len(data_loader)}')
+            # logger.debug(f'finished training on batch {a}/{len(data_loader)}')
             a = a + 1
 
         epoc_losses_hist.append(epoch_loss)
-        logger.info(f'epoch {epoch} finished')
+        print_log(f'epoch {epoch} finished')
 
     with open(os.path.join(args.model_dir, 'model.pth'), 'wb') as f:
         torch.save(model.state_dict(), f) # for inference only
-        logger.info(f'model saved')
+        print_log(f'model saved')
