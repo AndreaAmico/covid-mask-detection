@@ -1,6 +1,5 @@
 import time
 import cv2
-import boto3
 import base64
 import requests
 
@@ -18,7 +17,7 @@ logger = mylog(5)
 
 
 
-def invoke_endpoint(img):
+def invoke_endpoint(img, index):
     print(img.shape)
     
 
@@ -36,10 +35,10 @@ def invoke_endpoint(img):
     print(r.text)
 
 
-    plot_result(img, r.text)
+    plot_result(img, r.text, index)
 
 
-def plot_result(img, log):
+def plot_result(img, log, index):
     import matplotlib.pyplot as plt
     from matplotlib import patches
     import json
@@ -47,11 +46,14 @@ def plot_result(img, log):
     json_contents = json.loads(log)
 
     fig,ax = plt.subplots(1)
-    ax.imshow(img)
+    ax.imshow(img[...,::-1])
 
     json_content = json_contents[0]
 
     for box, score, label in zip(json_content["boxes"], json_content["scores"], json_content["labels"]):
+        if (score < 0.97) and (score>0.03):
+            continue
+
         lab_to_color = {
             1:(0,1,0),
             2:(1,0,0)
@@ -65,41 +67,29 @@ def plot_result(img, log):
         ax.add_patch(rect)
         ax.set_xticks([])
         ax.set_yticks([])
-    plt.savefig('out.png')
+    plt.savefig(f'boxed-frames/out_{index:03d}.jpg')
 
 
 
+frame_index = 0
+img_index = 0
+cap = cv2.VideoCapture('sample.mkv')
+
+while(cap.isOpened()):
+    ret, frame = cap.read()
+
+    #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    frame_index += 1
 
 
-IMG_REDUCTION = 2
-webcam = cv2.VideoCapture(0) #Use camera 0
+    cv2.imshow('frame', frame)
+    if not frame_index%5:
+        invoke_endpoint(frame, img_index)
+        img_index += 1
 
-
-while True:
-    try:
-        (rval, im) = webcam.read()
-        im=cv2.flip(im,1,1) #Flip to act as a mirror
-
-        # Resize the image to speed up detection
-        mini = cv2.resize(im, (im.shape[1] // IMG_REDUCTION, im.shape[0] // IMG_REDUCTION))
-
-        # Show the image
-        cv2.imshow('LIVE',   im)
-    except:
-        print('Error')
-        
-    key = cv2.waitKey(10)
-    # if Esc key is press then break out of the loop 
-    if key == 27: #The Esc key
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-    if key == 32: # spacebar
-        invoke_endpoint(mini)
 
-    
-
-# Stop video
-webcam.release()
-
-# Close all started windows
+cap.release()
 cv2.destroyAllWindows()
-
+print(frame_index, img_index)
