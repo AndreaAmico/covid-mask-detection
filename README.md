@@ -2,7 +2,7 @@
 
 This repository includes two different machine learning-based approaches to detect from a video stream the presence of people wearing and not wearing the face mask to fight the spread of the covid-19 pandemic. The first approach is lightweight, mostly suitable for edge computing applications. The latter is instead computationally intensive and requires dedicated hardware such as a local or cloud GPU. Here we choose a cloud approach employing AWS Sagemaker.
 
-
+![Live demo](https://media3.giphy.com/media/y0gpT045GYWWbU9fhl/giphy.gif)
 
 ### edge-coral
 Edge computing mask detection approach. The script has been tested on a Raspberry 3b using the Coral USB accelerator. 
